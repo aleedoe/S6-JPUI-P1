@@ -4,8 +4,8 @@ import enum
 
 
 class Role(enum.Enum):
-    M = "admin"
-    F = "guru"
+    A = "admin"
+    G = "guru"
 
 
 class User(db.Model):
