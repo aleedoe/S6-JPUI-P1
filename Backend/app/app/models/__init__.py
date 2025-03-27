@@ -4,3 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 from .user import User
+from .attendance import Attendance
+from ._class import Class
+from .student import Student
+
+__all__ = ["db", "User", "Attendance", "Class", "Student"]
