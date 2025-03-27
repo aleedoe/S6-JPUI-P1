@@ -7,3 +7,4 @@ from .user import User
 from .attendance import Attendance
 from ._class import Class
 from .student import Student
+from .student_image import StudentImage
