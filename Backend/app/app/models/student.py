@@ -12,3 +12,14 @@ class Student(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     def __repr__(self):
         return f'<Student {self.name}>'
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "nis": self.nis,
+            "class_id": self.class_id,
+            "photo_url": self.photo_url,
+            "face_encoding": self.face_encoding,
+            "created_at": self.created_at.isoformat()
+        }
