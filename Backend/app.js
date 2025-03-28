@@ -79,7 +79,7 @@ async function registerStudent() {
     }
     
     try {
-        const response = await fetch(`${API_BASE_URL}/student/register`, {
+        const response = await fetch(`${API_BASE_URL}/register-student`, {
             method: 'POST',
             body: formData
         });

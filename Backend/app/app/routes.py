@@ -20,7 +20,7 @@ def register_blueprint_attendance(app):
 attendance_bp.route('/take-attendance', methods=['POST'])(take_attendance)
 
 
-from app.controllers.main_face import register_student
+from app.controllers.student_service import register_student
 student_bp = Blueprint('student', __name__)
 
 def register_blueprint_student(app):

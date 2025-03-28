@@ -1,9 +1,11 @@
 from flask import request, jsonify
-from models import db, Student, StudentImage
+from app.models import db, Student, StudentImage
 from .storage_service import StorageService
 import face_recognition
 import numpy as np
 import json
+from PIL import Image
+import io
 import os
 
 def register_student():
@@ -19,25 +21,45 @@ def register_student():
         return jsonify({'error': 'At least 3 photos are required'}), 400
         
     try:
-        # Proses semua foto untuk mendapatkan encoding
         encodings = []
         for photo in photos:
-            temp_path = StorageService.save_temp(photo)
-            image = face_recognition.load_image_file(temp_path)
-            face_encodings = face_recognition.face_encodings(image)
+            # Validasi file
+            if not photo.filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                return jsonify({'error': 'Only JPG/JPEG/PNG files are allowed'}), 400
             
-            if len(face_encodings) == 0:
-                StorageService.delete_temp(temp_path)
-                return jsonify({'error': f'No face detected in one of the photos'}), 400
+            # Baca file sebagai bytes
+            img_bytes = photo.read()
+            
+            try:
+                # Coba buka gambar dengan PIL
+                img = Image.open(io.BytesIO(img_bytes))
                 
-            encodings.append(face_encodings[0])
-            StorageService.delete_temp(temp_path)
-            
-        # Rata-rata encoding untuk mendapatkan template wajah
+                # Konversi ke RGB jika diperlukan
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                    
+                # Simpan ke temporary file dalam format yang benar
+                temp_path = os.path.join('temp', f"temp_{photo.filename}")
+                img.save(temp_path, 'JPEG')
+                
+                # Proses dengan face_recognition
+                image = face_recognition.load_image_file(temp_path)
+                face_encodings = face_recognition.face_encodings(image)
+                
+                if len(face_encodings) == 0:
+                    StorageService.delete_temp(temp_path)
+                    return jsonify({'error': f'No face detected in: {photo.filename}'}), 400
+                    
+                encodings.append(face_encodings[0])
+                StorageService.delete_temp(temp_path)
+                
+            except Exception as img_error:
+                return jsonify({'error': f'Invalid image file: {photo.filename}. Error: {str(img_error)}'}), 400
+                
+        # Lanjutkan dengan proses registrasi...
         avg_encoding = np.mean(encodings, axis=0)
         encoding_str = json.dumps(avg_encoding.tolist())
         
-        # Buat record siswa
         student = Student(
             name=name,
             nis=nis,
@@ -48,8 +70,9 @@ def register_student():
         db.session.add(student)
         db.session.commit()
         
-        # Simpan foto-foto siswa
+        # Simpan foto asli (tanpa konversi)
         for photo in photos:
+            photo.seek(0)  # Reset file pointer
             image_url = StorageService.save_student_photo(photo, student.id)
             student_image = StudentImage(
                 student_id=student.id,
