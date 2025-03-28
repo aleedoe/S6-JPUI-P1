@@ -1,105 +1,100 @@
 <!DOCTYPE html>
-<html lang="id">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Debug API Pengenalan Wajah</title>
+    <title>Sistem Presensi Siswa</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .tab { overflow: hidden; border: 1px solid #ccc; background-color: #f1f1f1; }
+        .tab button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 10px 16px; transition: 0.3s; }
+        .tab button:hover { background-color: #ddd; }
+        .tab button.active { background-color: #ccc; }
+        .tabcontent { display: none; padding: 12px; border: 1px solid #ccc; border-top: none; }
+        .form-group { margin-bottom: 10px; }
+        label { display: inline-block; width: 120px; }
+        input, select { padding: 5px; width: 200px; }
+        button { padding: 8px 12px; cursor: pointer; }
+        #preview, #attendancePreview { max-width: 300px; max-height: 300px; margin-top: 10px; }
+        #results { margin-top: 20px; padding: 10px; border: 1px solid #ddd; }
+    </style>
 </head>
-
 <body>
-    <h2>📸 Pendaftaran Wajah</h2>
-    <form id="registerForm">
-        <input type="text" id="name" placeholder="Nama Siswa" required>
-        <input type="text" id="nis" placeholder="NIS" required>
-        <input type="file" id="registerImage" accept="image/*">
-        <button type="submit">Daftar Wajah</button>
-    </form>
-    <p id="registerResult"></p>
+    <h1>Sistem Presensi Siswa</h1>
+    
+    <div class="tab">
+        <button class="tablinks active" onclick="openTab(event, 'register')">Registrasi Siswa</button>
+        <button class="tablinks" onclick="openTab(event, 'attendance')">Presensi Harian</button>
+        <button class="tablinks" onclick="openTab(event, 'history')">Riwayat Presensi</button>
+    </div>
+    
+    <!-- Tab Registrasi Siswa -->
+    <div id="register" class="tabcontent" style="display: block;">
+        <h2>Registrasi Siswa Baru</h2>
+        <div class="form-group">
+            <label for="studentName">Nama Siswa:</label>
+            <input type="text" id="studentName" required>
+        </div>
+        <div class="form-group">
+            <label for="studentNIS">NIS:</label>
+            <input type="text" id="studentNIS" required>
+        </div>
+        <div class="form-group">
+            <label for="studentClass">Kelas:</label>
+            <select id="studentClass" required>
+                <option value="">Pilih Kelas</option>
+                <option value="1">Kelas 1</option>
+                <option value="2">Kelas 2</option>
+                <option value="3">Kelas 3</option>
+                <option value="4">Kelas 4</option>
+                <option value="5">Kelas 5</option>
+                <option value="6">Kelas 6</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="studentPhotos">Foto Siswa (min 3):</label>
+            <input type="file" id="studentPhotos" multiple accept="image/*" required>
+        </div>
+        <div id="photoPreview"></div>
+        <button onclick="registerStudent()">Daftarkan Siswa</button>
+        <div id="registerResult"></div>
+    </div>
+    
+    <!-- Tab Presensi Harian -->
+    <div id="attendance" class="tabcontent">
+        <h2>Ambil Presensi</h2>
+        <div class="form-group">
+            <label for="attendanceClass">Kelas:</label>
+            <select id="attendanceClass" required>
+                <option value="">Pilih Kelas</option>
+                <option value="1">Kelas 1</option>
+                <option value="2">Kelas 2</option>
+                <option value="3">Kelas 3</option>
+                <option value="4">Kelas 4</option>
+                <option value="5">Kelas 5</option>
+                <option value="6">Kelas 6</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="attendancePhoto">Foto Presensi:</label>
+            <input type="file" id="attendancePhoto" accept="image/*" required>
+        </div>
+        <img id="attendancePreview" style="display: none;">
+        <button onclick="takeAttendance()">Ambil Presensi</button>
+        <div id="attendanceResult"></div>
+    </div>
+    
+    <!-- Tab Riwayat Presensi -->
+    <div id="history" class="tabcontent">
+        <h2>Cek Riwayat Presensi</h2>
+        <div class="form-group">
+            <label for="historyStudentID">ID Siswa:</label>
+            <input type="text" id="historyStudentID" required>
+        </div>
+        <button onclick="getAttendanceHistory()">Cek Riwayat</button>
+        <div id="historyResult"></div>
+    </div>
 
-    <h2>✅ Presensi dengan Wajah</h2>
-    <form id="recognizeForm">
-        <input type="file" id="recognizeImage" accept="image/*">
-        <button type="submit">Presensi</button>
-    </form>
-    <p id="recognizeResult"></p>
-
-    <h2>📋 Data Presensi</h2>
-    <button onclick="fetchAttendance()">Lihat Data Presensi</button>
-    <ul id="attendanceList"></ul>
-
-    <script>
-        // Konversi Gambar ke Base64
-        function convertToBase64(file, callback) {
-            const reader = new FileReader();
-            reader.onload = function () {
-                callback(reader.result.split(',')[1]);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // Pendaftaran Wajah
-        document.getElementById("registerForm").addEventListener("submit", function (event) {
-            event.preventDefault();
-            const name = document.getElementById("name").value;
-            const nis = document.getElementById("nis").value;
-            const file = document.getElementById("registerImage").files[0];
-
-            if (!file) {
-                alert("Pilih gambar terlebih dahulu!");
-                return;
-            }
-
-            convertToBase64(file, function (base64Image) {
-                fetch("http://127.0.0.1:5000/register", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, nis, face_image: base64Image })
-                })
-                    .then(response => response.json())
-                    .then(data => document.getElementById("registerResult").innerText = JSON.stringify(data, null, 2))
-                    .catch(error => console.error("Error:", error));
-            });
-        });
-
-        // Pengenalan Wajah untuk Presensi
-        document.getElementById("recognizeForm").addEventListener("submit", function (event) {
-            event.preventDefault();
-            const file = document.getElementById("recognizeImage").files[0];
-
-            if (!file) {
-                alert("Pilih gambar terlebih dahulu!");
-                return;
-            }
-
-            convertToBase64(file, function (base64Image) {
-                fetch("http://127.0.0.1:5000/recognize", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ face_image: base64Image })
-                })
-                    .then(response => response.json())
-                    .then(data => document.getElementById("recognizeResult").innerText = JSON.stringify(data, null, 2))
-                    .catch(error => console.error("Error:", error));
-            });
-        });
-
-        // Ambil Data Presensi
-        function fetchAttendance() {
-            fetch("http://127.0.0.1:5000/attendance")
-                .then(response => response.json())
-                .then(data => {
-                    let list = document.getElementById("attendanceList");
-                    list.innerHTML = "";
-                    data.forEach(item => {
-                        let li = document.createElement("li");
-                        li.innerText = `${item.name} - ${item.timestamp}`;
-                        list.appendChild(li);
-                    });
-                })
-                .catch(error => console.error("Error:", error));
-        }
-    </script>
+    <script src="app.js"></script>
 </body>
-
 </html>
