@@ -17,6 +17,12 @@ def create_app():
     # Import blueprint    
     from app.routes import register_blueprint_user
     register_blueprint_user(app)
+    
+    from app.routes import register_blueprint_attendance
+    register_blueprint_attendance(app)
+    
+    from app.routes import register_blueprint_student
+    register_blueprint_student(app)
 
     # Inisialisasi database
     db.init_app(app)
