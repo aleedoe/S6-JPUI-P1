@@ -6,69 +6,68 @@ import numpy as np
 import base64
 import cv2
 from datetime import datetime
-
+from app.models.student_image import StudentImage
+import os
 
 # Fungsi untuk menyimpan wajah siswa ke database
 def register_face():
     data = request.json
     name = data["name"]
     nis = data["nis"]
-    face_images = data["face_images"]  # Menerima list gambar base64
+    face_image = base64.b64decode(data["face_image"])  # Decode base64 ke gambar
 
-    # Cek apakah siswa sudah ada di database
-    cursor.execute("SELECT id FROM students WHERE nis = %s", (nis,))
-    student = cursor.fetchone()
+    # Cek apakah siswa sudah terdaftar
+    student = Student.query.filter_by(nis=nis).first()
+    if not student:
+        student = Student(name=name, nis=nis)
+        db.session.add(student)
+        db.session.commit()
 
-    if student:
-        student_id = student[0]
-    else:
-        # Jika belum ada, tambahkan siswa ke database
-        cursor.execute("INSERT INTO students (name, nis) VALUES (%s, %s)", (name, nis))
-        db.commit()
-        student_id = cursor.lastrowid  # Ambil ID siswa yang baru dimasukkan
+    # Buat folder dataset jika belum ada
+    student_folder = f"dataset/{nis}"
+    os.makedirs(student_folder, exist_ok=True)
 
-    # Loop setiap gambar wajah yang dikirimkan
-    for face_image in face_images:
-        face_bytes = base64.b64decode(face_image)
-        np_arr = np.frombuffer(face_bytes, np.uint8)
-        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    # Simpan gambar
+    image_count = len(os.listdir(student_folder)) + 1
+    image_path = f"{student_folder}/photo_{image_count}.jpg"
+    with open(image_path, "wb") as img_file:
+        img_file.write(face_image)
 
-        # Deteksi dan encode wajah
-        face_locations = face_recognition.face_locations(frame)
-        if not face_locations:
-            return jsonify({"error": "Tidak ada wajah terdeteksi dalam salah satu gambar"}), 400
+    # Simpan path gambar ke database
+    new_image = StudentImage(student_id=student.id, image_path=image_path)
+    db.session.add(new_image)
+    db.session.commit()
 
-        face_encoding = face_recognition.face_encodings(frame, face_locations)[0]
-        face_encoding_str = ",".join(map(str, face_encoding))
-
-        # Simpan encoding ke tabel student_faces
-        cursor.execute("INSERT INTO student_faces (student_id, face_encoding) VALUES (%s, %s)", (student_id, face_encoding_str))
-        db.commit()
-
-    return jsonify({"message": "✅ Semua wajah berhasil disimpan!", "name": name})
+    return jsonify({"message": "✅ Wajah berhasil disimpan!", "name": name, "image_path": image_path})
 
 
-def register_face():
-    data = request.json
-    name = data["name"]
-    nis = data["nis"]
-    face_image = base64.b64decode(data["face_image"])  # Decode gambar dari base64
-
-    # Convert ke array numpy untuk diproses
+def recognize_face():
+    face_image = base64.b64decode(request.json["face_image"])  # Decode gambar dari base64
     np_arr = np.frombuffer(face_image, np.uint8)
     frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    # Deteksi wajah & ambil encoding
+    # Load data siswa dari database
+    cursor.execute("SELECT id, name, face_encoding FROM students")
+    students = cursor.fetchall()
+
+    # Ambil encoding wajah dari input
     face_locations = face_recognition.face_locations(frame)
     if not face_locations:
         return jsonify({"error": "Tidak ada wajah terdeteksi"}), 400
-    
-    face_encoding = face_recognition.face_encodings(frame, face_locations)[0]
-    face_encoding_str = ",".join(map(str, face_encoding))  # Simpan sebagai string
 
-    # Simpan ke database
-    new_student = Student(name=name, nis=nis, face_encoding=face_encoding_str)
-    db.session.add(new_student)
-    db.session.commit()
+    face_encoding_input = face_recognition.face_encodings(frame, face_locations)[0]
 
-    return jsonify({"message": "✅ Wajah berhasil disimpan!", "name": name})
+    # Loop semua siswa dan bandingkan wajah
+    for student in students:
+        student_id, name, face_encoding_str = student
+        known_encoding = np.array(list(map(float, face_encoding_str.split(","))))  # Konversi string ke array
+
+        match = face_recognition.compare_faces([known_encoding], face_encoding_input, tolerance=0.5)
+        if match[0]:
+            # Simpan presensi ke database
+            cursor.execute("INSERT INTO attendance (student_id) VALUES (%s)", (student_id,))
+            db.commit()
+
+            return jsonify({"message": "✅ Presensi berhasil!", "name": name, "timestamp": datetime.now().isoformat()})
+
+    return jsonify({"error": "❌ Wajah tidak dikenali"}), 400
