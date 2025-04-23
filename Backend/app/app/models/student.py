@@ -6,8 +6,8 @@ class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     nis = db.Column(db.String(100), unique=True, nullable=False)
-    class_id = db.Column(db.String(100), nullable=False)
-    images = db.relationship("StudentImage", backref="student", lazy=True)
+    grade_id = db.Column(db.Integer, db.ForeignKey('grade.id'), nullable=False)
+    images = db.Column(db.String(225), nullable=False)
     face_encoding = db.Column(db.String(225), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     def __repr__(self):
@@ -18,7 +18,7 @@ class Student(db.Model):
             "id": self.id,
             "name": self.name,
             "nis": self.nis,
-            "class_id": self.class_id,
+            "grade_id": self.class_id,
             "photo_url": self.photo_url,
             "face_encoding": self.face_encoding,
             "created_at": self.created_at.isoformat()
