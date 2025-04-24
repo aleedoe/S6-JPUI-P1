@@ -90,3 +90,37 @@ def register_student():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+
+def get_all_students():
+    try:
+        students = Student.query.all()
+        data = []
+
+        for student in students:
+            # Ambil semua gambar yang sesuai student_id
+            images = StudentImage.query.filter_by(student_id=student.id).all()
+            image_data = [img.to_dict() for img in images]
+
+            student_dict = {
+                "id": student.id,
+                "name": student.name,
+                "nis": student.nis,
+                "grade_id": student.grade_id,
+                "face_encoding": student.face_encoding,
+                "created_at": student.created_at.isoformat(),
+                "images": image_data
+            }
+            data.append(student_dict)
+
+        return jsonify({
+            "status": "success",
+            "message": "Data siswa berhasil diambil.",
+            "data": data
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Gagal mengambil data: {str(e)}"
+        }), 500
