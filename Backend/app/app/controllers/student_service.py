@@ -124,3 +124,38 @@ def get_all_students():
             "status": "error",
             "message": f"Gagal mengambil data: {str(e)}"
         }), 500
+
+def get_student_by_id(student_id):
+    try:
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({
+                "status": "error",
+                "message": f"Siswa dengan ID {student_id} tidak ditemukan."
+            }), 404
+
+        # Ambil semua gambar yang terkait student ini
+        images = StudentImage.query.filter_by(student_id=student.id).all()
+        image_data = [img.to_dict() for img in images]
+
+        student_data = {
+            "id": student.id,
+            "name": student.name,
+            "nis": student.nis,
+            "grade_id": student.grade_id,
+            "face_encoding": student.face_encoding,
+            "created_at": student.created_at.isoformat(),
+            "images": image_data
+        }
+
+        return jsonify({
+            "status": "success",
+            "message": "Data siswa berhasil diambil.",
+            "data": student_data
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Gagal mengambil data siswa: {str(e)}"
+        }), 500
