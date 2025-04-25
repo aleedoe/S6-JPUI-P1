@@ -3,6 +3,8 @@ import numpy as np
 from app.models.student import Student
 import os
 import json
+from flask import current_app
+
 
 class FaceService:
     @staticmethod
@@ -45,6 +47,8 @@ class FaceService:
             print(f"Error in face recognition: {e}")
             return None
 
+ALLOWED_EXTENSIONS = current_app.config['ALLOWED_EXTENSIONS']
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -56,6 +60,7 @@ def load_dataset():
     known_face_grades = []
     
     # Loop melalui setiap kelas (kelas-1 sampai kelas-6)
+    DATASET_FOLDER = current_app.config['DATASET_FOLDER']
     for grade_folder in os.listdir(DATASET_FOLDER):
         grade_path = os.path.join(DATASET_FOLDER, grade_folder)
         if os.path.isdir(grade_path) and grade_folder.startswith('kelas-'):
