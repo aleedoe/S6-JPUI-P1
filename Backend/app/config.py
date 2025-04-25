@@ -1,5 +1,4 @@
 import os
-import app
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -11,7 +10,5 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://' + USERNAME + ':' + PASSWORD + '@' + HOST + '/' + DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     # Konfigurasi folder upload
-    UPLOAD_FOLDER = 'static/uploads'
     DATASET_FOLDER = 'dataset'
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER

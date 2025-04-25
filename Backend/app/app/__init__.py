@@ -11,6 +11,7 @@ def create_app():
     
     # Load config
     app.config.from_object(Config)
+    app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
     migrate = Migrate(app, db)
 
